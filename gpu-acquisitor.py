@@ -7,7 +7,7 @@
 import argparse
 import time
 import torch
-import safe_gpu
+from safe_gpu import safe_gpu
 import logging
 
 
