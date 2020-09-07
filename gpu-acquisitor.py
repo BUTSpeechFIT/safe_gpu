@@ -7,7 +7,7 @@
 import argparse
 import time
 import torch
-from brnolm.runtime import safe_gpu
+import safe_gpu
 import logging
 
 
