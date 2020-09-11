@@ -19,3 +19,22 @@ If you don't want / can't use that, provide your own GPU memory allocating funct
 ```
 gpu_owner = safe_gpu.GPUOwner(placeholder_fn=lambda: cuda.mem_alloc(4))
 ```
+
+### Checking that it works
+Together with this package, a small testing script is provided.
+It exagerrates the time needed to acquire the GPU after polling nvidia-smi, make the race condition technically sure to happen.
+To run it, get to a machine with 2 free GPUs and run two instances of the script in parallel.
+You should see in the output that one of them really waited for the faster one to fully acquire the GPU.
+```
+ibenes@supergpu1: ~/safe_gpu $ python3 gpu-acquisitor.py --id 1 & python3 gpu-acquisitor.py --id 2
+GPUOwner1 2020-09-11 13:11:05,476 [INFO] acquiring lock
+GPUOwner2 2020-09-11 13:11:05,476 [INFO] acquiring lock
+GPUOwner1 2020-09-11 13:11:05,476 [INFO] lock acquired
+GPUOwner1 2020-09-11 13:11:05,872 [INFO] Got CUDA_VISIBLE_DEVICES=2
+GPUOwner2 2020-09-11 13:11:11,035 [INFO] lock acquired
+GPUOwner1 2020-09-11 13:11:11,035 [INFO] lock released
+GPUOwner2 2020-09-11 13:11:11,326 [INFO] Got CUDA_VISIBLE_DEVICES=3
+GPUOwner2 2020-09-11 13:11:16,507 [INFO] lock released
+GPUOwner1 2020-09-11 13:11:17,066 [INFO] Finished
+GPUOwner2 2020-09-11 13:11:22,538 [INFO] Finished
+```
