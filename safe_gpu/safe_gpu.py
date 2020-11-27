@@ -3,26 +3,52 @@ import time
 import subprocess
 import fcntl
 import logging
-import socket
 
 
 LOCK_FILENAME = '/tmp/gpu-lock-magic-RaNdOM-This_Name-NEED_BE-THE_SAME-Across_Users'
 
 
-def get_free_gpu():
-    ''' Returns an integer. Note the possible race condition!
+def get_free_gpus():
+    ''' Returns a list of integers specifying GPUs not in use.
+
+        Note that it is not atomic in any sense.
     '''
-    # dirty hack for machines with non-exclusive GPUs
-    if socket.gethostname().startswith('PCO'):
-        return 0
-    else:
-        shell_line = 'nvidia-smi -q | grep "Minor\|Processes" | grep "None" -B1 | tr -d " " | cut -d ":" -f2 | sed -n "1p"'
-        return int(subprocess.check_output(shell_line, shell=True).decode())
+    res = subprocess.run(["nvidia-smi"], stdout=subprocess.PIPE)
+    stdout = res.stdout.decode('ascii')
+    lines = stdout.split("\n")
+
+    i = 0
+
+    # consume the headers
+    while lines[i] != '|===============================+======================+======================|':
+        i += 1
+    i += 1
+
+    # learn about devices
+    devices = []
+    while lines[i].split() != []:
+        device = lines[i].split()[1]
+        devices.append(device)
+        i += 3
+
+    # consume additional headers
+    while lines[i] != '|=============================================================================|':
+        i += 1
+    i += 1
+
+    processes = []
+    # learn about processes p
+    while lines[i] != '+-----------------------------------------------------------------------------+':
+        process = lines[i].split()[1]
+        processes.append(process)
+        i += 1
+
+    return [d for d in devices if d not in processes]
 
 
-def pytorch_placeholder():
+def pytorch_placeholder(device_no):
     import torch
-    return torch.zeros((1), device='cuda')
+    return torch.zeros((1), device=f'cuda:{device_no}')
 
 
 class SafeLocker:
@@ -49,9 +75,11 @@ class SafeUmask:
 
 
 class GPUOwner:
-    def __init__(self, placeholder_fn=pytorch_placeholder, logger=None, debug_sleep=0.0):
+    def __init__(self, nb_gpus=1, placeholder_fn=pytorch_placeholder, logger=None, debug_sleep=0.0):
         if logger is None:
             logger = logging
+
+        self.placeholders = []
 
         with SafeUmask(0):  # do not mask any permission out by default
             with open(os.open(LOCK_FILENAME, os.O_CREAT | os.O_WRONLY, 0o666), 'w') as f:
@@ -60,18 +88,21 @@ class GPUOwner:
                 with SafeLocker(f):
                     logger.info('lock acquired')
 
-                    free_gpu = get_free_gpu()
-                    os.environ['CUDA_VISIBLE_DEVICES'] = str(free_gpu)
+                    free_gpus = get_free_gpus()
+                    if len(free_gpus) < nb_gpus:
+                        raise RuntimeError("Required {nb_gpus} GPUs, only found these free: {free_gpus}. Somebody didn't properly declare resources?")
 
-                    if not os.environ['CUDA_VISIBLE_DEVICES']:
-                        raise RuntimeError("No free GPUs found. Someone didn't properly declare their gpu resource?")
+                    gpus_to_allocate = free_gpus[:nb_gpus]
+                    os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(gpus_to_allocate)
 
-                    logger.info(f"Got CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
+                    logger.info(f"Set CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
                     time.sleep(debug_sleep)
 
-                    try:
-                        self.placeholder = placeholder_fn()
-                    except RuntimeError:
-                        logger.error('Failed to acquire placeholder, truly marvellous')
-                        raise
+                    for gpu_no in range(nb_gpus):
+                        try:
+                            placeholder = placeholder_fn(gpu_no)
+                            self.placeholders.append(placeholder)
+                        except RuntimeError:
+                            logger.error('Failed to acquire placeholder, truly marvellous')
+                            raise
                 logger.info('lock released')
