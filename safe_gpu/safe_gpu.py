@@ -3,16 +3,21 @@ import time
 import subprocess
 import fcntl
 import logging
+import socket
 
 
 LOCK_FILENAME = '/tmp/gpu-lock-magic-RaNdOM-This_Name-NEED_BE-THE_SAME-Across_Users'
 
 
-def setup_cuda_visible_devices():
-    free_gpu = subprocess.check_output('nvidia-smi -q | grep "Minor\|Processes" | grep "None" -B1 | tr -d " " | cut -d ":" -f2 | sed -n "1p"', shell=True)
-    os.environ['CUDA_VISIBLE_DEVICES'] = free_gpu.decode().strip()
-
-    return free_gpu
+def get_free_gpu():
+    ''' Returns an integer. Note the possible race condition!
+    '''
+    # dirty hack for machines with non-exclusive GPUs
+    if socket.gethostname().startswith('PCO'):
+        return 0
+    else:
+        shell_line = 'nvidia-smi -q | grep "Minor\|Processes" | grep "None" -B1 | tr -d " " | cut -d ":" -f2 | sed -n "1p"'
+        return int(subprocess.check_output(shell_line, shell=True).decode())
 
 
 def pytorch_placeholder():
@@ -50,11 +55,13 @@ class GPUOwner:
 
         with SafeUmask(0):  # do not mask any permission out by default
             with open(os.open(LOCK_FILENAME, os.O_CREAT | os.O_WRONLY, 0o666), 'w') as f:
-                logger.info(f'acquiring lock')
+                logger.info('acquiring lock')
 
                 with SafeLocker(f):
-                    logger.info(f'lock acquired')
-                    setup_cuda_visible_devices()
+                    logger.info('lock acquired')
+
+                    free_gpu = get_free_gpu()
+                    os.environ['CUDA_VISIBLE_DEVICES'] = str(free_gpu)
 
                     if not os.environ['CUDA_VISIBLE_DEVICES']:
                         raise RuntimeError("No free GPUs found. Someone didn't properly declare their gpu resource?")
@@ -65,6 +72,6 @@ class GPUOwner:
                     try:
                         self.placeholder = placeholder_fn()
                     except RuntimeError:
-                        logger.error(f'Failed to acquire placeholder, truly marvellous')
+                        logger.error('Failed to acquire placeholder, truly marvellous')
                         raise
-                logger.info(f'lock released')
+                logger.info('lock released')
