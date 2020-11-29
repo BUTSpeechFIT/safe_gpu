@@ -109,8 +109,6 @@ class GPUOwner:
             else:
                 raise ValueError(f'Requested {nb_gpus} GPUs on a machine with single one.')
 
-        self.placeholders = []
-
         with SafeUmask(0):  # do not mask any permission out by default
             with open(os.open(LOCK_FILENAME, os.O_CREAT | os.O_WRONLY, 0o666), 'w') as f:
                 logger.info('acquiring lock')
@@ -128,11 +126,9 @@ class GPUOwner:
                     logger.info(f"Set CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
                     time.sleep(debug_sleep)
 
-                    for gpu_no in range(nb_gpus):
-                        try:
-                            placeholder = placeholder_fn(gpu_no)
-                            self.placeholders.append(placeholder)
-                        except RuntimeError:
-                            logger.error('Failed to acquire placeholder, truly marvellous')
-                            raise
+                    try:
+                        self.placeholders = [placeholder_fn(device_no) for device_no in range(nb_gpus)]
+                    except RuntimeError:
+                        logger.error('Failed to acquire placeholder, truly marvellous')
+                        raise
                 logger.info('lock released')
