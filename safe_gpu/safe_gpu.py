@@ -89,7 +89,6 @@ def single_gpu_display_mode():
 
     nb_gpus = int(get_nvidia_smi_value(lines, 'Attached GPUs'))
     if nb_gpus != 1:
-        print(f"Found {nb_gpus} GPUs")
         return False
 
     display_mode = get_nvidia_smi_value(lines, 'Display Mode')
@@ -105,7 +104,10 @@ class GPUOwner:
             logger = logging
 
         if single_gpu_display_mode():
-            return
+            if nb_gpus == 1:
+                return
+            else:
+                raise ValueError(f'Requested {nb_gpus} GPUs on a machine with single one.')
 
         self.placeholders = []
 
