@@ -116,15 +116,14 @@ class GPUOwner:
         with SafeUmask(0):  # do not mask any permission out by default
             with open(os.open(LOCK_FILENAME, os.O_CREAT | os.O_WRONLY, 0o666), 'w') as f:
                 with SafeLocker(f, logger):
-
                     free_gpus = get_free_gpus()
                     if len(free_gpus) < nb_gpus:
                         raise RuntimeError(f"Required {nb_gpus} GPUs, only found these free: {free_gpus}. Somebody didn't properly declare resources?")
-
                     gpus_to_allocate = free_gpus[:nb_gpus]
-                    os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(gpus_to_allocate)
 
+                    os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(gpus_to_allocate)
                     logger.info(f"Set CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
+
                     time.sleep(debug_sleep)
 
                     try:
