@@ -11,7 +11,7 @@ LOCK_FILENAME = '/tmp/gpu-lock-magic-RaNdOM-This_Name-NEED_BE-THE_SAME-Across_Us
 def get_free_gpus():
     ''' Returns a list of integers specifying GPUs not in use.
 
-        Note that it is not atomic in any sense.
+        Note that this information is volatile.
     '''
     res = subprocess.run(["nvidia-smi"], stdout=subprocess.PIPE)
     stdout = res.stdout.decode('ascii')
@@ -51,7 +51,7 @@ def pytorch_placeholder(device_no):
     return torch.zeros((1), device=f'cuda:{device_no}')
 
 
-class SafeLocker:
+class SafeLock:
     def __init__(self, fd, logger=None):
         self.logger = logger if logger else logging
         self._fd = fd
@@ -86,7 +86,7 @@ def get_nvidia_smi_value(nvidia_smi_lines, key):
         raise KeyError(f'"{key}" not found in the provided nvidia-smi output')
 
 
-def single_gpu_display_mode():
+def is_single_gpu_display_mode():
     res = subprocess.run(['nvidia-smi', '-q'], stdout=subprocess.PIPE)
     stdout = res.stdout.decode('ascii')
     lines = stdout.split("\n")
@@ -107,18 +107,19 @@ class GPUOwner:
         if logger is None:
             logger = logging
 
-        if single_gpu_display_mode():
+        # a workaround for machines where GPU is used also for actual display
+        if is_single_gpu_display_mode():
             if nb_gpus == 1:
                 return
             else:
                 raise ValueError(f'Requested {nb_gpus} GPUs on a machine with single one.')
 
-        with SafeUmask(0):  # do not mask any permission out by default
+        with SafeUmask(0):  # do not mask any permission out by default, allowing others to work with the lock
             with open(os.open(LOCK_FILENAME, os.O_CREAT | os.O_WRONLY, 0o666), 'w') as f:
-                with SafeLocker(f, logger):
+                with SafeLock(f, logger):
                     free_gpus = get_free_gpus()
                     if len(free_gpus) < nb_gpus:
-                        raise RuntimeError(f"Required {nb_gpus} GPUs, only found these free: {free_gpus}. Somebody didn't properly declare resources?")
+                        raise RuntimeError(f"Required {nb_gpus} GPUs, only found these free: {free_gpus}. Somebody didn't properly declare their resources?")
                     gpus_to_allocate = free_gpus[:nb_gpus]
 
                     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(gpus_to_allocate)
@@ -129,5 +130,5 @@ class GPUOwner:
                     try:
                         self.placeholders = [placeholder_fn(device_no) for device_no in range(nb_gpus)]
                     except RuntimeError:
-                        logger.error('Failed to acquire placeholder, truly marvellous')
+                        logger.error('Failed to acquire placeholder, truly marvellous. Race condition with someone not using `GPUOwner?`')
                         raise
