@@ -20,7 +20,10 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: POSIX",
     ],
-    url='https://github.com/BUTSpeechFIT/BrnoLM',
+    extras_require={
+        'default_placeholder': ['pytorch>=1']
+    },
+    url='https://github.com/BUTSpeechFIT/safe_gpu',
     description='A process-safe acquisition of exclusive GPU',
     long_description=get_long_desc(),
     long_description_content_type='text/markdown',
