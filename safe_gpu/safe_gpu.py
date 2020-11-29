@@ -74,10 +74,38 @@ class SafeUmask:
         os.umask(self.old_mask)
 
 
+def get_nvidia_smi_value(nvidia_smi_lines, key):
+    for line in nvidia_smi_lines:
+        if key in line:
+            return line.split()[-1]
+    else:
+        raise KeyError(f'"{key}" not found in the provided nvidia-smi output')
+
+
+def single_gpu_display_mode():
+    res = subprocess.run(['nvidia-smi', '-q'], stdout=subprocess.PIPE)
+    stdout = res.stdout.decode('ascii')
+    lines = stdout.split("\n")
+
+    nb_gpus = int(get_nvidia_smi_value(lines, 'Attached GPUs'))
+    if nb_gpus != 1:
+        print(f"Found {nb_gpus} GPUs")
+        return False
+
+    display_mode = get_nvidia_smi_value(lines, 'Display Mode')
+    if display_mode == "Enabled":
+        return True
+    else:
+        return False
+
+
 class GPUOwner:
     def __init__(self, nb_gpus=1, placeholder_fn=pytorch_placeholder, logger=None, debug_sleep=0.0):
         if logger is None:
             logger = logging
+
+        if single_gpu_display_mode():
+            return
 
         self.placeholders = []
 
@@ -90,7 +118,7 @@ class GPUOwner:
 
                     free_gpus = get_free_gpus()
                     if len(free_gpus) < nb_gpus:
-                        raise RuntimeError("Required {nb_gpus} GPUs, only found these free: {free_gpus}. Somebody didn't properly declare resources?")
+                        raise RuntimeError(f"Required {nb_gpus} GPUs, only found these free: {free_gpus}. Somebody didn't properly declare resources?")
 
                     gpus_to_allocate = free_gpus[:nb_gpus]
                     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(gpus_to_allocate)
