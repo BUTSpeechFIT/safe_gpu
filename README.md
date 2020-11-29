@@ -17,14 +17,14 @@ Prior to initializing CUDA (typically happens when you place something on GPU), 
 ```
 from safe_gpu import safe_gpu
 
-gpu_owner = safe_gpu.GPUOWner()
+gpu_owner = safe_gpu.GPUOwner()
 ```
 
 ### Acquiring multiple GPUs
 Pass the desired number to `GPUOwner`.
 
 ```
-gpu_owner = safe_gpu.GPUOWner(nb_gpus)
+gpu_owner = safe_gpu.GPUOwner(nb_gpus)
 ```
 
 ### Avoiding PyTorch
