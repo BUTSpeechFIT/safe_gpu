@@ -52,14 +52,18 @@ def pytorch_placeholder(device_no):
 
 
 class SafeLocker:
-    def __init__(self, fd):
+    def __init__(self, fd, logger=None):
+        self.logger = logger if logger else logging
         self._fd = fd
 
     def __enter__(self):
+        self.logger.info('acquiring lock')
         fcntl.lockf(self._fd, fcntl.LOCK_EX)
+        self.logger.info('lock acquired')
 
     def __exit__(self, type, value, traceback):
         fcntl.lockf(self._fd, fcntl.LOCK_UN)
+        self.logger.info('lock released')
 
 
 class SafeUmask:
@@ -111,10 +115,7 @@ class GPUOwner:
 
         with SafeUmask(0):  # do not mask any permission out by default
             with open(os.open(LOCK_FILENAME, os.O_CREAT | os.O_WRONLY, 0o666), 'w') as f:
-                logger.info('acquiring lock')
-
-                with SafeLocker(f):
-                    logger.info('lock acquired')
+                with SafeLocker(f, logger):
 
                     free_gpus = get_free_gpus()
                     if len(free_gpus) < nb_gpus:
@@ -131,4 +132,3 @@ class GPUOwner:
                     except RuntimeError:
                         logger.error('Failed to acquire placeholder, truly marvellous')
                         raise
-                logger.info('lock released')
