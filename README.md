@@ -11,6 +11,14 @@ Features:
 Downsides:
 * in order to really prevent the race condition, everyone on your cluster has to use this
 
+## Instalation
+
+`safe_gpu` is on PyPi, so you can simply:
+
+```
+pip install safe-gpu
+```
+
 ## Usage
 Prior to initializing CUDA (typically happens when you place something on GPU), instantiate `GPUOwner` and bind it to a variable, that's all.
 

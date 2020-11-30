@@ -51,6 +51,12 @@ def pytorch_placeholder(device_no):
     return torch.zeros((1), device=f'cuda:{device_no}')
 
 
+def tensorflow_placeholder(device_no):
+    import tensorflow as tf
+    with tf.device(f'GPU:{device_no}'):
+        return tf.constant([1.0])
+
+
 class SafeLock:
     def __init__(self, fd, logger=None):
         self.logger = logger if logger else logging
