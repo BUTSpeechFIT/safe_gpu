@@ -10,7 +10,7 @@ def get_long_desc():
 
 setup(
     name='safe-gpu',
-    version='1.0',
+    version='1.1',
     python_requires='>=3.6',
     packages=[
         'safe_gpu',
@@ -20,9 +20,6 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: POSIX",
     ],
-    extras_require={
-        'default_placeholder': ['pytorch>=1']
-    },
     url='https://github.com/BUTSpeechFIT/safe_gpu',
     description='A process-safe acquisition of exclusive GPU',
     long_description=get_long_desc(),
