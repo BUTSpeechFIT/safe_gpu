@@ -4,8 +4,8 @@ A module for safe acquisition of GPUs in exclusive mode.
 Relevant mainly in clusters with a purely declarative gpu resource, such as many versions of SGE.
 
 Features:
-* toolkit independence (PyTorch/TensorFlow/pycuda/...)
-* included support for PyTorch and TensorFlow2
+* toolkit independence (PyTorch/TensorFlow/pycuda/...), this just sets `CUDA_VISIBLE_DEVICES` properly
+* included support for PyTorch and TensorFlow2 backends, open to others
 * multiple GPUs acquisition
 * workaround for machines with a single GPU used for display and computation alike
 * open to implementation in different languages
