@@ -9,41 +9,13 @@ LOCK_FILENAME = '/tmp/gpu-lock-magic-RaNdOM-This_Name-NEED_BE-THE_SAME-Across_Us
 
 
 def get_free_gpus():
-    ''' Returns a list of integers specifying GPUs not in use.
+    ''' Returns a list of strings specifying GPUs not in use.
 
         Note that this information is volatile.
     '''
-    res = subprocess.run(["nvidia-smi"], stdout=subprocess.PIPE)
-    stdout = res.stdout.decode('ascii')
-    lines = stdout.split("\n")
+    raw_output = subprocess.check_output("nvidia-smi -q | grep 'Minor\|Processes' | grep -B1 'None' | tr -d ' ' | grep 'MinorNumber' | cut -d':' -f 2", shell=True)
 
-    i = 0
-
-    # consume the headers
-    while lines[i] != '|===============================+======================+======================|':
-        i += 1
-    i += 1
-
-    # learn about devices
-    devices = []
-    while lines[i].split() != []:
-        device = lines[i].split()[1]
-        devices.append(device)
-        i += 3
-
-    # consume additional headers
-    while lines[i] != '|=============================================================================|':
-        i += 1
-    i += 1
-
-    processes = []
-    # learn about processes p
-    while lines[i] != '+-----------------------------------------------------------------------------+':
-        process = lines[i].split()[1]
-        processes.append(process)
-        i += 1
-
-    return [d for d in devices if d not in processes]
+    return raw_output.decode().split()
 
 
 def pytorch_placeholder(device_no):
