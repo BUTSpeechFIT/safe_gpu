@@ -88,6 +88,7 @@ class GPUOwner:
         # a workaround for machines where GPU is used also for actual display
         if is_single_gpu_display_mode():
             if nb_gpus == 1:
+                self.placeholders = [placeholder_fn(0)]
                 return
             else:
                 raise ValueError(f'Requested {nb_gpus} GPUs on a machine with single one.')
