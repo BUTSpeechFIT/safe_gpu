@@ -8,6 +8,10 @@ import logging
 LOCK_FILENAME = '/tmp/gpu-lock-magic-RaNdOM-This_Name-NEED_BE-THE_SAME-Across_Users'
 
 
+class NvidiasmiError(Exception):
+    pass
+
+
 def get_free_gpus():
     ''' Returns a list of strings specifying GPUs not in use.
 
@@ -66,6 +70,11 @@ def get_nvidia_smi_value(nvidia_smi_lines, key):
 
 def is_single_gpu_display_mode():
     res = subprocess.run(['nvidia-smi', '-q'], stdout=subprocess.PIPE)
+    if res.returncode == 0:
+        pass
+    else:
+        raise NvidiasmiError(res.stdout.decode('ascii'))
+
     stdout = res.stdout.decode('ascii')
     lines = stdout.split("\n")
 
