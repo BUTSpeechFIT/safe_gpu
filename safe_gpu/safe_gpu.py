@@ -96,7 +96,9 @@ class GPUOwner:
 
         # a workaround for machines where GPU is used also for actual display
         if is_single_gpu_display_mode():
+            logger.info(f"Running on a machine with single GPU used for actual display")
             if nb_gpus == 1:
+                os.environ['CUDA_VISIBLE_DEVICES'] = '0'
                 self.placeholders = [placeholder_fn(0)]
                 return
             else:
