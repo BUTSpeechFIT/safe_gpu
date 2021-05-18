@@ -10,7 +10,7 @@ def get_long_desc():
 
 setup(
     name='safe-gpu',
-    version='1.2.1',
+    version='1.2.2',
     python_requires='>=3.6',
     packages=[
         'safe_gpu',
