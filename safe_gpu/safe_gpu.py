@@ -17,7 +17,7 @@ def get_free_gpus():
 
         Note that this information is volatile.
     '''
-    raw_output = subprocess.check_output("nvidia-smi -q | grep 'Minor\|Processes' | grep -B1 'None' | tr -d ' ' | grep 'MinorNumber' | cut -d':' -f 2", shell=True)
+    raw_output = subprocess.check_output("nvidia-smi -q | grep 'UUID\|Processes' | grep -B1 'None' | tr -d ' ' | grep 'UUID' | cut -d':' -f 2", shell=True)
 
     return raw_output.decode().split()
 
