@@ -38,6 +38,43 @@ If you want multiple GPUs, pass the desired number to `GPUOwner`:
 gpu_owner = safe_gpu.GPUOwner(nb_gpus)
 ```
 
+### Usage with Horovod
+Typical Horovod usage includes starting your script in several processes, one per GPU.
+Therefore, only ask for one GPU in each process:
+
+```
+gpu_owner = safe_gpu.GPUOwner()  # 1 GPU is the default, can be ommited
+hvd.init()
+```
+
+
+### Common errors
+In order to properly setup GPUs for your process, `GPUOwner` really needs be constructed before CUDA is initialized.
+When CUDA does get initialized, it fixes your logical devices (e.g. PyTorch `cuda:1` etc.) to actual GPUs in your system.
+If `CUDA_VISIBLE_DEVICES` are not set at that moment, CUDA will happily offer your process all of the visible GPUs, including those already occupied.
+
+Most commonly, this issue occurs for users who try to play it safe and check CUDA availability beforehand:
+```
+if torch.cuda.is_available():  # This already initializes CUDA
+  gpu_owner = safe_gpu.GPUOwner(nb_gpus)  # So this can fail easily
+```
+
+If your workflow mandates on-the-fly checking of GPU availability, instead use:
+```
+try:
+  gpu_owner = safe_gpu.GPUOwner(nb_gpus)
+except safe_gpu.NvidiasmiError:
+  ...
+```
+
+Also, horovod users can be at risk:
+```
+hvd.init()
+torch.cuda.set_device(hvd.local_rank())  # This initializes CUDA, too
+gpu_owner = safe_gpu.GPUOwner()  # Thus this is likely to fail
+```
+
+
 ### Other backends
 The default implementation uses a PyTorch tensor to claim a GPU.
 Additionally, a TensorFlow2 placeholder is provided as `safe_gpu.tensorflow_placeholder`.
