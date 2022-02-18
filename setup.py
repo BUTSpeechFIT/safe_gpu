@@ -10,7 +10,7 @@ def get_long_desc():
 
 setup(
     name='safe-gpu',
-    version='1.3',
+    version='1.4',
     python_requires='>=3.6',
     packages=[
         'safe_gpu',
@@ -21,7 +21,7 @@ setup(
         "Operating System :: POSIX",
     ],
     url='https://github.com/BUTSpeechFIT/safe_gpu',
-    description='A process-safe acquisition of exclusive GPU',
+    description='A process-safe acquisition of exclusive GPUs',
     long_description=get_long_desc(),
     long_description_content_type='text/markdown',
     author='Karel Benes',
