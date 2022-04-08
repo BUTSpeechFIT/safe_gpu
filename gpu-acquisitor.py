@@ -29,7 +29,7 @@ def simulate_computation_tensorflow(nb_gpus):
             results.append(a)
 
     return results
-    
+
 
 def main(args, logger):
     time.sleep(args.sleep)  # simulate other stuff, e.g. loading data etc.
@@ -37,7 +37,7 @@ def main(args, logger):
         'pytorch': simulate_computation_pytorch,
         'tf': simulate_computation_tensorflow,
     }
-    results = computations[args.backend](args.nb_gpus)
+    results = computations[args.backend](args.nb_gpus)  # noqa: F841
 
     time.sleep(args.sleep*2)  # simulate some more computation on all GPUs
 

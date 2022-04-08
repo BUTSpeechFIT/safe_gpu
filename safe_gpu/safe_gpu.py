@@ -22,7 +22,7 @@ def get_free_gpus():
 
     gpus = {}
     for line in gpus_smi.split('\n'):
-        idx, uuid =  line.split(',')
+        idx, uuid = line.split(',')
         gpus[uuid.strip()] = idx.strip()
 
     # in case of no running processes
