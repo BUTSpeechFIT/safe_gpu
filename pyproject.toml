@@ -1,0 +1,21 @@
+[project]
+name = "safe-gpu"
+version = "1.5"
+description = "A process-safe acquisition of exclusive GPUs"
+readme = "README.md"
+requires-python = ">=3.6"
+license = {file = "LICENSE"}
+keywords = ["GPU", "Resource allocation"]
+
+authors = [
+  {email = "ibenes@fit.vutbr.cz", name = "Karel Beneš"}
+]
+
+classifiers=[
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX",
+]
+
+[project.urls]
+repository = "https://github.com/BUTSpeechFIT/safe_gpu"
