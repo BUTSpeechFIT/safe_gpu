@@ -72,6 +72,7 @@ if __name__ == '__main__':
             logger=logger,
             debug_sleep=args.sleep,
         )
+        logger.info(f'Allocated devices: {gpu_owner.devices_taken}')
     else:
         safe_gpu.claim_gpus(
             nb_gpus=args.nb_gpus,
@@ -79,6 +80,7 @@ if __name__ == '__main__':
             logger=logger,
             debug_sleep=args.sleep,
         )
+        logger.info(f'Allocated devices: {safe_gpu.gpu_owner.devices_taken}')
 
     main(args, logger)
     logger.info('Finished')

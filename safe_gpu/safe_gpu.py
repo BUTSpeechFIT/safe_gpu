@@ -132,6 +132,8 @@ class GPUOwner:
                         gpus_to_allocate = free_gpus[:nb_gpus]
                         self.allocate_gpus(gpus_to_allocate)
 
+        self.devices_taken = [int(gpu) for gpu in gpus_to_allocate]
+
     def allocate_gpus(self, gpu_device_numbers):
         os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(gpu_device_numbers)
         self.logger.info(f"Set CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
