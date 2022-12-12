@@ -7,6 +7,8 @@ import logging
 
 LOCK_FILENAME = '/tmp/gpu-lock-magic-RaNdOM-This_Name-NEED_BE-THE_SAME-Across_Users'
 
+gpu_owner = None
+
 
 class NvidiasmiError(Exception):
     pass
@@ -141,3 +143,8 @@ class GPUOwner:
         except RuntimeError:
             self.logger.error('Failed to acquire placeholder, truly marvellous. Race condition with someone not using `GPUOwner?`')
             raise
+
+
+def claim_gpus(nb_gpus=1, placeholder_fn=pytorch_placeholder, logger=None, debug_sleep=0.0):
+    global gpu_owner
+    gpu_owner = GPUOwner(nb_gpus, placeholder_fn, logger, debug_sleep)

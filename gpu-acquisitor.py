@@ -52,6 +52,8 @@ if __name__ == '__main__':
                         help='how many gpus to take')
     parser.add_argument('--backend', default='pytorch', choices=['pytorch', 'tf'],
                         help='how many gpus to take')
+    parser.add_argument('--explicit-owner-object', action='store_true',
+                        help='construct actual GPUOwner object')
     args = parser.parse_args()
 
     logging.basicConfig(format='%(name)s %(asctime)s [%(levelname)s] %(message)s')
@@ -63,11 +65,20 @@ if __name__ == '__main__':
         'tf': safe_gpu.tensorflow_placeholder,
     }
 
-    gpu_owner = safe_gpu.GPUOwner(
-        nb_gpus=args.nb_gpus,
-        placeholder_fn=placeholders[args.backend],
-        logger=logger,
-        debug_sleep=args.sleep,
-    )
+    if args.explicit_owner_object:
+        gpu_owner = safe_gpu.GPUOwner(
+            nb_gpus=args.nb_gpus,
+            placeholder_fn=placeholders[args.backend],
+            logger=logger,
+            debug_sleep=args.sleep,
+        )
+    else:
+        safe_gpu.claim_gpus(
+            nb_gpus=args.nb_gpus,
+            placeholder_fn=placeholders[args.backend],
+            logger=logger,
+            debug_sleep=args.sleep,
+        )
+
     main(args, logger)
     logger.info('Finished')
