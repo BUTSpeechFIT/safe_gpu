@@ -1,6 +1,6 @@
 [project]
 name = "safe-gpu"
-version = "1.5"
+version = "1.5.1"
 description = "A process-safe acquisition of exclusive GPUs"
 readme = "README.md"
 requires-python = ">=3.6"

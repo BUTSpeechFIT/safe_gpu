@@ -114,6 +114,7 @@ class GPUOwner:
         self.logger = logger
         self.debug_sleep = debug_sleep
         self.placeholder_fn = placeholder_fn
+        self.devices_taken = []
 
         # a workaround for machines where GPU is used also for actual display
         if is_single_gpu_display_mode():
@@ -132,8 +133,6 @@ class GPUOwner:
                         gpus_to_allocate = free_gpus[:nb_gpus]
                         self.allocate_gpus(gpus_to_allocate)
 
-        self.devices_taken = [int(gpu) for gpu in gpus_to_allocate]
-
     def allocate_gpus(self, gpu_device_numbers):
         os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(gpu_device_numbers)
         self.logger.info(f"Set CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
@@ -145,6 +144,8 @@ class GPUOwner:
         except RuntimeError:
             self.logger.error('Failed to acquire placeholder, truly marvellous. Race condition with someone not using `GPUOwner?`')
             raise
+
+        self.devices_taken = [int(gpu) for gpu in gpu_device_numbers]
 
 
 def claim_gpus(nb_gpus=1, placeholder_fn=pytorch_placeholder, logger=None, debug_sleep=0.0):
