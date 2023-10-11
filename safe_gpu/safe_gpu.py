@@ -44,11 +44,21 @@ def pytorch_placeholder(device_no):
     import torch
     return torch.zeros((1), device=f'cuda:{device_no}')
 
-
 def tensorflow_placeholder(device_no):
     import tensorflow as tf
     with tf.device(f'GPU:{device_no}'):
         return tf.constant([1.0])
+
+def pycuda_placeholder(device_no):
+    # https://documen.tician.de/pycuda/driver.html#pycuda.driver.Device.make_context
+    print(f"pytorch_placeholder(device_no={device_no})")
+
+    import pycuda.driver as cuda
+    cuda.init()
+    device = cuda.Device(device_no)
+    cuda_context = device.make_context()
+
+    return cuda_context
 
 
 class SafeLock:
@@ -140,13 +150,52 @@ class GPUOwner:
 
         time.sleep(self.debug_sleep)
 
+        if not self.placeholder_fn:
+            self.logger.info(f"No placeholder imposed (placeholder_fn = {self.placeholder_fn}).")
+
         try:
             self.placeholders = [self.placeholder_fn(device_no) for device_no in range(len(gpu_device_numbers))]
         except RuntimeError:
-            self.logger.error('Failed to acquire placeholder, truly marvellous. Race condition with someone not using `GPUOwner?`')
+            self.logger.error("""
+                              Failed to acquire placeholder.
+                              Race condition with someone not using `GPUOwner` ?
+                              Or CUDA was alrady initialized when calling `claim_gpus()`?
+                              """)
             raise
 
 
 def claim_gpus(nb_gpus=1, placeholder_fn=pytorch_placeholder, logger=None, debug_sleep=0.0):
+    """
+    Allocate the GPUs.
+
+    :param nb_gpus: number of GPUs to be allocated.
+    :param placeholder_fn: Placeholder function, it creates CUDA context at particular GPU.
+                           Typically by creating a ``dummy'' Tensor that gets stored till the end
+                           of the program life-time.
+    :param logger: argument for passing in the logging module or object (e.g. `logger=logging`)
+    :param debug_sleep: delay between setting `os.environ['CUDA_VISIBLE_DEVICES']` and executing `placeholder_fn` calls.
+
+    IMPORTANT NOTICE:
+
+    This function must be called before initializing CUDA:
+    - The `import torch` can be done before calling `claim_gpus()`.
+    - But `torch.cuda.is_available()` should not be called before `claim_gpus()`,
+      otherwise setting `CUDA_VISIBLE_DEVICES`in `GPUOwner::allocate_gpus()` will work well.
+
+    """
+
     global gpu_owner
     gpu_owner = GPUOwner(nb_gpus, placeholder_fn, logger, debug_sleep)
+
+def release_gpus():
+    global gpu_owner
+    gpu_owner.logger.info(f"RELEASING CUDA DEVICES (CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}):")
+
+    if gpu_owner.placeholder_fn is pycuda_placeholder:
+        for cuda_context in gpu_owner.placeholders:
+            import pycuda.driver as cuda
+            device = cuda_context.get_device()
+            gpu_owner.logger.info(f"releasing cuda_context on device : {device.get_attribute(cuda.device_attribute.PCI_DEVICE_ID)} '{device.name()}'")
+            cuda_context.detach()
+
+
