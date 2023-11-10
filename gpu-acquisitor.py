@@ -31,18 +31,39 @@ def simulate_computation_tensorflow(nb_gpus):
     return results
 
 
-def main(args, logger):
+def simulate_computation_pycuda(nb_gpus):
+    import pycuda.driver as cuda
+    results = []
+
+    for gpu_no in range(nb_gpus):
+
+        with safe_gpu.PycudaGpu(gpu_no):
+            # create byte array on a GPU,
+            # - see: https://documen.tician.de/pycuda/tutorial.html
+            array = bytes(b'HU7KCNWqOk4hma9VguEA5IK56lhfGnVC')
+            array_gpu = cuda.mem_alloc(len(array))  # pointer to memory
+            cuda.memcpy_htod(array_gpu, array)  # host -> device
+
+            results.append({'ptr' : array_gpu, 'gpu_no' : gpu_no})
+
+    return results
+
+
+
+def simulate_computations(args, logger):
     time.sleep(args.sleep)  # simulate other stuff, e.g. loading data etc.
+
     computations = {
         'pytorch': simulate_computation_pytorch,
         'tf': simulate_computation_tensorflow,
+        'pycuda': simulate_computation_pycuda,
     }
     results = computations[args.backend](args.nb_gpus)  # noqa: F841
 
     time.sleep(args.sleep*2)  # simulate some more computation on all GPUs
 
 
-if __name__ == '__main__':
+def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--sleep', default=3.0, type=float,
                         help='how long to sleep before trying to operate')
@@ -50,11 +71,15 @@ if __name__ == '__main__':
                         help='just a number to identify processes')
     parser.add_argument('--nb-gpus', default=1, type=int,
                         help='how many gpus to take')
-    parser.add_argument('--backend', default='pytorch', choices=['pytorch', 'tf'],
+    parser.add_argument('--backend', default='pytorch', choices=['pytorch', 'tf', 'pycuda'],
                         help='how many gpus to take')
     parser.add_argument('--explicit-owner-object', action='store_true',
                         help='construct actual GPUOwner object')
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+def main():
+    args = get_args()
 
     logging.basicConfig(format='%(name)s %(asctime)s [%(levelname)s] %(message)s')
     logger = logging.getLogger(f'GPUOwner{args.id}')
@@ -63,6 +88,7 @@ if __name__ == '__main__':
     placeholders = {
         'pytorch': safe_gpu.pytorch_placeholder,
         'tf': safe_gpu.tensorflow_placeholder,
+        'pycuda': safe_gpu.pycuda_placeholder,
     }
 
     if args.explicit_owner_object:
@@ -82,5 +108,9 @@ if __name__ == '__main__':
         )
         logger.info(f'Allocated devices: {safe_gpu.gpu_owner.devices_taken}')
 
-    main(args, logger)
+    simulate_computations(args, logger)
     logger.info('Finished')
+
+
+if __name__ == '__main__':
+    main()
