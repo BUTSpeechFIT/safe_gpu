@@ -4,9 +4,6 @@ import subprocess
 import fcntl
 import logging
 
-from typing import Any, Callable, List, Optional
-
-
 LOCK_FILENAME = '/tmp/gpu-lock-magic-RaNdOM-This_Name-NEED_BE-THE_SAME-Across_Users'
 
 gpu_owner = None
@@ -16,7 +13,7 @@ class NvidiasmiError(Exception):
     pass
 
 
-def get_free_gpus() -> List[int]:
+def get_free_gpus():
     """
     Returns a list of strings specifying GPUs not in use.
     Note that this information is volatile.
@@ -42,16 +39,16 @@ def get_free_gpus() -> List[int]:
     return sorted([gpus[free] for free in free_gpus])
 
 
-def pytorch_placeholder(device_no) -> Any:
+def pytorch_placeholder(device_no):
     import torch
     return torch.zeros((1), device=f'cuda:{device_no}')
 
-def tensorflow_placeholder(device_no) -> Any:
+def tensorflow_placeholder(device_no):
     import tensorflow as tf
     with tf.device(f'GPU:{device_no}'):
         return tf.constant([1.0])
 
-def pycuda_placeholder(device_no) -> Any:
+def pycuda_placeholder(device_no):
     """
     Docs of pycuda `make_context()`:
     https://documen.tician.de/pycuda/driver.html#pycuda.driver.Device.make_context
@@ -91,24 +88,6 @@ class SafeUmask:
         os.umask(self.old_mask)
 
 
-class PycudaGpu:
-    """
-    Context manager for selecting 'active context'
-    of a GPU for computation with pycuda.
-    """
-
-    def __init__(self, gpu_id: int):
-        self.gpu_id = gpu_id
-
-    def __enter__(self):
-        global gpu_owner
-        gpu_owner.placeholders[self.gpu_id].push()
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        import pycuda.driver as cuda
-        cuda.Context.pop()
-
-
 def get_nvidia_smi_value(nvidia_smi_lines, key) -> str:
     for line in nvidia_smi_lines:
         if key in line:
@@ -141,16 +120,18 @@ def is_single_gpu_display_mode() -> bool:
 class GPUOwner:
     def __init__(
         self,
-        nb_gpus: int = 1,
-        placeholder_fn: Callable[int, Any] = pytorch_placeholder,
-        logger: Optional[Any] = None, # module
-        debug_sleep: int = 0.0,
+        nb_gpus=1,
+        placeholder_fn=pytorch_placeholder,
+        logger=None,
+        debug_sleep=0.0,
     ):
         if logger is None:
             logger = logging
         self.logger = logger
         self.debug_sleep = debug_sleep
         self.placeholder_fn = placeholder_fn
+        self.devices_taken = []
+        self.placeholders = []
 
         # a workaround for machines where GPU is used also for actual display
         if is_single_gpu_display_mode():
@@ -176,18 +157,18 @@ class GPUOwner:
         time.sleep(self.debug_sleep)
 
         try:
-            self.placeholders = [self.placeholder_fn(device_no) for device_no in range(len(gpu_device_numbers))]
+            self.placeholders.extend(self.placeholder_fn(device_no) for device_no in range(len(gpu_device_numbers)))
         except RuntimeError:
             self.logger.error(
                 """
                 Failed to acquire placeholder.
                 Race condition with someone not using `GPUOwner` ?
-                Or CUDA was alrady initialized when calling `claim_gpus()`?
+                Or CUDA was already initialized when calling `claim_gpus()`?
                 """
             )
             raise
 
-        self.devices_taken = [int(gpu) for gpu in gpu_device_numbers]
+        self.devices_taken.extend(int(gpu) for gpu in gpu_device_numbers)
 
     def __del__(self):
         # this destructor gets called when program ends
@@ -217,10 +198,10 @@ class GPUOwner:
 
 
 def claim_gpus(
-    nb_gpus: int = 1,
-    placeholder_fn: Callable[int, None] = pytorch_placeholder,
-    logger: Optional[Any] = None, # module
-    debug_sleep: int = 0.0
+    nb_gpus=1,
+    placeholder_fn=pytorch_placeholder,
+    logger=None,
+    debug_sleep=0.0,
 ) -> None:
     """
     Allocate the GPUs.
@@ -248,6 +229,3 @@ def claim_gpus(
 def release_gpus() -> None:
     global gpu_owner
     gpu_owner.release_gpus()
-
-
-

@@ -13,7 +13,7 @@ import logging
 def simulate_computation_pytorch(nb_gpus):
     import torch
     results = []
-    for gpu_no in range(args.nb_gpus):
+    for gpu_no in range(nb_gpus):
         a = torch.zeros((2, 2), device=f'cuda:{gpu_no}')
         results.append(a)
 
@@ -23,7 +23,7 @@ def simulate_computation_pytorch(nb_gpus):
 def simulate_computation_tensorflow(nb_gpus):
     import tensorflow as tf
     results = []
-    for gpu_no in range(args.nb_gpus):
+    for gpu_no in range(nb_gpus):
         with tf.device(f'GPU:{gpu_no}'):
             a = tf.constant([1.0])
             results.append(a)
@@ -35,19 +35,32 @@ def simulate_computation_pycuda(nb_gpus):
     import pycuda.driver as cuda
     results = []
 
-    for gpu_no in range(nb_gpus):
+    class PycudaGpu:
+        """
+        Context manager for selecting 'active context'
+        of a GPU for computation with pycuda.
+        """
 
-        with safe_gpu.PycudaGpu(gpu_no):
+        def __init__(self, gpu_id: int):
+            self.gpu_id = gpu_id
+
+        def __enter__(self):
+            safe_gpu.gpu_owner.placeholders[self.gpu_id].push()
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            cuda.Context.pop()
+
+    for gpu_no in range(nb_gpus):
+        with PycudaGpu(gpu_no):
             # create byte array on a GPU,
             # - see: https://documen.tician.de/pycuda/tutorial.html
             array = bytes(b'HU7KCNWqOk4hma9VguEA5IK56lhfGnVC')
             array_gpu = cuda.mem_alloc(len(array))  # pointer to memory
             cuda.memcpy_htod(array_gpu, array)  # host -> device
 
-            results.append({'ptr' : array_gpu, 'gpu_no' : gpu_no})
+            results.append({'ptr': array_gpu, 'gpu_no': gpu_no})
 
     return results
-
 
 
 def simulate_computations(args, logger):
@@ -108,6 +121,7 @@ def main():
         )
         logger.info(f'Allocated devices: {safe_gpu.gpu_owner.devices_taken}')
 
+    print(args)
     simulate_computations(args, logger)
     logger.info('Finished')
 
