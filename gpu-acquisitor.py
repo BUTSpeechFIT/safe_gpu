@@ -100,7 +100,7 @@ def main():
 
     placeholders = {
         'pytorch': safe_gpu.PytorchPlaceholder(),
-        'tf': safe_gpu.tensorflow_placeholder,
+        'tf': safe_gpu.TensorflowPlaceholder(),
         'pycuda': safe_gpu.PyCudaPlaceholder(),
     }
 

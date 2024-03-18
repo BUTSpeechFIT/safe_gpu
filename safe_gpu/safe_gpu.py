@@ -48,10 +48,14 @@ class PytorchPlaceholder:
         pass
 
 
-def tensorflow_placeholder(device_no):
-    import tensorflow as tf
-    with tf.device(f'GPU:{device_no}'):
-        return tf.constant([1.0])
+class TensorflowPlaceholder:
+    def __call__(self, device_no):
+        import tensorflow as tf
+        with tf.device(f'GPU:{device_no}'):
+            return tf.constant([1.0])
+
+    def release(self, placeholder):
+        pass
 
 
 class PyCudaPlaceholder:
@@ -199,11 +203,11 @@ class GPUOwner:
                 pytorch_tensor = self.placeholders.pop()
                 self.placeholder_fn.release(pytorch_tensor)
 
-        elif self.placeholder_fn is tensorflow_placeholder:
+        elif isinstance(self.placeholder_fn, TensorflowPlaceholder):
             while len(self.placeholders):
                 # this does not really release the GPU...
                 tensorflow_tensor = self.placeholders.pop()
-                del tensorflow_tensor
+                self.placeholder_fn.release(tensorflow_tensor)
 
 
 def claim_gpus(

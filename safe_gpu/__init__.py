@@ -3,5 +3,5 @@ from .safe_gpu import (
     release_gpus,
     PyCudaPlaceholder,
     PytorchPlaceholder,
-    tensorflow_placeholder,
+    TensorflowPlaceholder,
 )
