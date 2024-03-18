@@ -190,24 +190,9 @@ class GPUOwner:
         self.release_gpus()
 
     def release_gpus(self) -> None:
-        self.logger.info(f"RELEASING PLACEHOLDERS ON CUDA DEVICES : {self.devices_taken}")
-
-        if isinstance(self.placeholder_fn, PyCudaPlaceholder):
-            for ii, cuda_context in enumerate(self.placeholders):
-                self.placeholder_fn.release(cuda_context)
-                self.logger.info(f"released cuda_context on device {self.devices_taken[ii]}")
-
-        elif isinstance(self.placeholder_fn, PytorchPlaceholder):
-            while len(self.placeholders):
-                # this does not really release the GPU...
-                pytorch_tensor = self.placeholders.pop()
-                self.placeholder_fn.release(pytorch_tensor)
-
-        elif isinstance(self.placeholder_fn, TensorflowPlaceholder):
-            while len(self.placeholders):
-                # this does not really release the GPU...
-                tensorflow_tensor = self.placeholders.pop()
-                self.placeholder_fn.release(tensorflow_tensor)
+        for i, placeholder in enumerate(self.placeholders):
+            self.logger.info(f"Releasing placeholder on CUDA device: {self.devices_taken[i]}")
+            self.placeholder_fn.release(placeholder)
 
 
 def claim_gpus(
