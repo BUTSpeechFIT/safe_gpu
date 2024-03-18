@@ -99,7 +99,7 @@ def main():
     logger.setLevel(logging.INFO)
 
     placeholders = {
-        'pytorch': safe_gpu.pytorch_placeholder,
+        'pytorch': safe_gpu.PytorchPlaceholder(),
         'tf': safe_gpu.tensorflow_placeholder,
         'pycuda': safe_gpu.PyCudaPlaceholder(),
     }

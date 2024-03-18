@@ -39,9 +39,14 @@ def get_free_gpus():
     return sorted([gpus[free] for free in free_gpus])
 
 
-def pytorch_placeholder(device_no):
-    import torch
-    return torch.zeros((1), device=f'cuda:{device_no}')
+class PytorchPlaceholder:
+    def __call__(self, device_no):
+        import torch
+        return torch.zeros((1), device=f'cuda:{device_no}')
+
+    def release(self, placeholder):
+        pass
+
 
 def tensorflow_placeholder(device_no):
     import tensorflow as tf
@@ -126,7 +131,7 @@ class GPUOwner:
     def __init__(
         self,
         nb_gpus=1,
-        placeholder_fn=pytorch_placeholder,
+        placeholder_fn=PytorchPlaceholder(),
         logger=None,
         debug_sleep=0.0,
     ):
@@ -188,11 +193,11 @@ class GPUOwner:
                 self.placeholder_fn.release(cuda_context)
                 self.logger.info(f"released cuda_context on device {self.devices_taken[ii]}")
 
-        elif self.placeholder_fn is pytorch_placeholder:
+        elif isinstance(self.placeholder_fn, PytorchPlaceholder):
             while len(self.placeholders):
                 # this does not really release the GPU...
                 pytorch_tensor = self.placeholders.pop()
-                del pytorch_tensor
+                self.placeholder_fn.release(pytorch_tensor)
 
         elif self.placeholder_fn is tensorflow_placeholder:
             while len(self.placeholders):
@@ -203,7 +208,7 @@ class GPUOwner:
 
 def claim_gpus(
     nb_gpus=1,
-    placeholder_fn=pytorch_placeholder,
+    placeholder_fn=PytorchPlaceholder(),
     logger=None,
     debug_sleep=0.0,
 ) -> None:
