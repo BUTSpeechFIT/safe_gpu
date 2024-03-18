@@ -99,9 +99,9 @@ def main():
     logger.setLevel(logging.INFO)
 
     placeholders = {
-        'pytorch': safe_gpu.PytorchPlaceholder(),
-        'tf': safe_gpu.TensorflowPlaceholder(),
-        'pycuda': safe_gpu.PyCudaPlaceholder(),
+        'pytorch': safe_gpu.PytorchPlaceholder(logger),
+        'tf': safe_gpu.TensorflowPlaceholder(logger),
+        'pycuda': safe_gpu.PyCudaPlaceholder(logger),
     }
 
     if args.explicit_owner_object:
@@ -123,6 +123,8 @@ def main():
 
     print(args)
     simulate_computations(args, logger)
+    if args.backend in ['pycuda']:
+        safe_gpu.release_gpus()
     logger.info('Finished')
 
 

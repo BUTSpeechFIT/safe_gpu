@@ -40,15 +40,22 @@ def get_free_gpus():
 
 
 class PytorchPlaceholder:
+    def __init__(self, logger=logging):
+        self.logger = logger
+
     def __call__(self, device_no):
         import torch
         return torch.zeros((1), device=f'cuda:{device_no}')
 
     def release(self, placeholder):
         pass
+        self.logger.info("Did nothing, PyTorch doesn't expose interface for releasing GPUs")
 
 
 class TensorflowPlaceholder:
+    def __init__(self, logger=logging):
+        self.logger = logger
+
     def __call__(self, device_no):
         import tensorflow as tf
         with tf.device(f'GPU:{device_no}'):
@@ -56,9 +63,13 @@ class TensorflowPlaceholder:
 
     def release(self, placeholder):
         pass
+        self.logger.info("Did nothing, TensorFlow doesn't expose interface for releasing GPUs")
 
 
 class PyCudaPlaceholder:
+    def __init__(self, logger=logging):
+        self.logger = logger
+
     def __call__(self, device_no):
         """
         Docs of pycuda `make_context()`:
@@ -73,6 +84,7 @@ class PyCudaPlaceholder:
 
     def release(self, placeholder):
         placeholder.detach()
+        self.logger.info("Released a CUDA context")
 
 
 class SafeLock:
@@ -183,11 +195,6 @@ class GPUOwner:
             raise
 
         self.devices_taken.extend(int(gpu) for gpu in gpu_device_numbers)
-
-    def __del__(self):
-        # this destructor gets called when program ends
-        # TODO: does it work ?
-        self.release_gpus()
 
     def release_gpus(self) -> None:
         for i, placeholder in enumerate(self.placeholders):
