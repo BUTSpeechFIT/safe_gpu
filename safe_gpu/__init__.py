@@ -1,7 +1,7 @@
 from .safe_gpu import (
     claim_gpus,
     release_gpus,
-    pycuda_placeholder,
+    PyCudaPlaceholder,
     pytorch_placeholder,
     tensorflow_placeholder,
 )

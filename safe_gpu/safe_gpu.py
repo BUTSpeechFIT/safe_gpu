@@ -48,17 +48,22 @@ def tensorflow_placeholder(device_no):
     with tf.device(f'GPU:{device_no}'):
         return tf.constant([1.0])
 
-def pycuda_placeholder(device_no):
-    """
-    Docs of pycuda `make_context()`:
-    https://documen.tician.de/pycuda/driver.html#pycuda.driver.Device.make_context
-    """
-    import pycuda.driver as cuda
-    cuda.init()
-    device = cuda.Device(device_no)
-    cuda_context = device.make_context()
 
-    return cuda_context
+class PyCudaPlaceholder:
+    def __call__(self, device_no):
+        """
+        Docs of pycuda `make_context()`:
+        https://documen.tician.de/pycuda/driver.html#pycuda.driver.Device.make_context
+        """
+        import pycuda.driver as cuda
+        cuda.init()
+        device = cuda.Device(device_no)
+        cuda_context = device.make_context()
+
+        return cuda_context
+
+    def release(self, placeholder):
+        placeholder.detach()
 
 
 class SafeLock:
@@ -178,10 +183,9 @@ class GPUOwner:
     def release_gpus(self) -> None:
         self.logger.info(f"RELEASING PLACEHOLDERS ON CUDA DEVICES : {self.devices_taken}")
 
-        if self.placeholder_fn is pycuda_placeholder:
+        if isinstance(self.placeholder_fn, PyCudaPlaceholder):
             for ii, cuda_context in enumerate(self.placeholders):
-                device = cuda_context.get_device()
-                cuda_context.detach()
+                self.placeholder_fn.release(cuda_context)
                 self.logger.info(f"released cuda_context on device {self.devices_taken[ii]}")
 
         elif self.placeholder_fn is pytorch_placeholder:

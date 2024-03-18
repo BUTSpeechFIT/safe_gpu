@@ -101,7 +101,7 @@ def main():
     placeholders = {
         'pytorch': safe_gpu.pytorch_placeholder,
         'tf': safe_gpu.tensorflow_placeholder,
-        'pycuda': safe_gpu.pycuda_placeholder,
+        'pycuda': safe_gpu.PyCudaPlaceholder(),
     }
 
     if args.explicit_owner_object:
