@@ -169,9 +169,6 @@ class GPUOwner:
                         gpus_to_allocate = free_gpus[:nb_gpus]
                         self.allocate_gpus(gpus_to_allocate)
 
-        self.devices_taken = [int(gpu) for gpu in gpus_to_allocate]
-
-
     def allocate_gpus(self, gpu_device_numbers) -> None:
         os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(gpu_device_numbers)
         self.logger.info(f"Set CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
@@ -189,6 +186,8 @@ class GPUOwner:
                 """
             )
             raise
+
+        self.devices_taken = [int(gpu) for gpu in gpu_device_numbers]
 
     def __del__(self):
         # this destructor gets called when program ends
