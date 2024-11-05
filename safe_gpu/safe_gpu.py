@@ -4,7 +4,9 @@ import subprocess
 import fcntl
 import logging
 
-LOCK_FILENAME = '/tmp/gpu-lock-magic-RaNdOM-This_Name-NEED_BE-THE_SAME-Across_Users'
+from pathlib import Path
+
+LOCK_FILENAME = '/tmp/safe_gpu/gpu-lock-magic-RaNdOM-This_Name-NEED_BE-THE_SAME-Across_Users'
 
 gpu_owner = None
 
@@ -167,6 +169,7 @@ class GPUOwner:
             else:
                 raise ValueError(f'Requested {nb_gpus} GPUs on a machine with single one.')
         else:
+            Path(LOCK_FILENAME).parents[0].mkdir(mode=0o777, parents=True, exist_ok=True)
             with SafeUmask(0):  # do not mask any permission out by default, allowing others to work with the lock
                 with open(os.open(LOCK_FILENAME, os.O_CREAT | os.O_WRONLY, 0o666), 'w') as f:
                     with SafeLock(f, logger):
